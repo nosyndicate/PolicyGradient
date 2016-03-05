@@ -8,10 +8,10 @@ require 'torch'
 	This code heavily use the code from dpnn : https://github.com/nicholas-leonard/dpnn/blob/master/ReinforceCategorical.lua
 --]]
 
-local DiscretePolicy, parent = torch.class('rl.DiscretePolicy','rl.Policy');
+local SoftmaxPolicy, parent = torch.class('rl.SoftmaxPolicy','rl.Policy');
 
 
-function DiscretePolicy:__init(actNum)
+function SoftmaxPolicy:__init(actNum)
 	parent:__init(actNum);
 end
 
@@ -25,7 +25,7 @@ end
 	The sampled value from the Multinomial distribution in one-hot encoding will be store in self.action
 	The output of this function is the index of the action
 --]]
-function DiscretePolicy:forward(parameters)
+function SoftmaxPolicy:forward(parameters)
 	assert(self.actNum == parameters:size()[1], 'mismatch of policy distribution');
 	
 	-- save the input for future use
@@ -57,7 +57,7 @@ end
 	=    1/p_i * 1          (if y = i)
 	=    0                  (if y = 0)
 --]]
-function DiscretePolicy:backward()
+function SoftmaxPolicy:backward()
 	self.gradInput = self.action:clone();
 	local denominator = self.input:clone();
 	
