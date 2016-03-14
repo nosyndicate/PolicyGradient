@@ -9,6 +9,7 @@ torch.include('rl','Reinforce.lua');
 torch.include('rl','GPOMDP.lua');
 torch.include('rl','Policy.lua');
 torch.include('rl','SoftmaxPolicy.lua');
+torch.include('rl','GaussianPolicy.lua');
 torch.include('rl','Optimizer.lua');
 torch.include('rl','StochasticGradientDescent.lua');
 
