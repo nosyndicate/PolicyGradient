@@ -5,10 +5,10 @@
 package.path = package.path..";../?/init.lua"
 package.path = package.path..";../?.lua"
 
-require 'torch'
-require 'rl'
-require 'benchmark'
 
+
+require 'torch'
+require 'control'
 
 -- global variables
 local stepInteval = nil
@@ -25,7 +25,8 @@ debug = true
 
 function love.load(arg)
 	-- create the game, do not use random start
-	mountainCar = benchmark.MountainCar(false)
+	mountainCar = init(false)
+	
 	stepInteval = 0.05 -- second
 	stepTimer = stepInteval
 	
@@ -38,7 +39,7 @@ function love.load(arg)
 	resolution = (upper - lower)/love.graphics.getWidth()
 	
 	-- set the background color to white
-	love.graphics.setBackgroundColor(255,255,255)
+	love.graphics.setBackgroundColor(255, 255, 255)
 end
 
 
@@ -49,17 +50,8 @@ function love.update(dt)
 	
 	-- time is up, need to take a step
 	if stepTimer < 0 then
-		
-		-- do we need to restart the episode?
-		if mountainCar.terminal then
-			mountainCar:initialization()
-		end
-		
-		mountainCar:step(1) -- for now, just a test action
-		
-		
-		
-
+		-- one step in simulation
+		step()
 		
 		-- reset the timer
 		stepTimer = stepInteval
@@ -70,14 +62,15 @@ function mountain()
 	local p = lower
 
 	local x = 0;
-	local y = -math.sin(3*p)*scale+base
+	local y = -math.sin(3 * p) * scale + base
 	
 	local points = {}
 	local width = love.graphics.getWidth()
 
+	-- plot the sin curve (which is the mountain)
 	for i=0,width-1 do
 		x = i
-		y = -math.sin(3*p) * scale + base
+		y = -math.sin(3 * p) * scale + base
 		p = p + resolution
 		
 		-- put the point into table
@@ -94,19 +87,19 @@ function flag()
 	-- figure out the start point
 	local goalPosition = mountainCar.goalPosition
 	local x = (goalPosition - lower)/resolution
-	local y = -math.sin(3*goalPosition)*scale+base
+	local y = -math.sin(3 * goalPosition) * scale + base
 	
-	table.insert(points,x)
-	table.insert(points,y)
+	table.insert(points, x)
+	table.insert(points, y)
 	
-	table.insert(points,x)
-	table.insert(points,y-20)
+	table.insert(points, x)
+	table.insert(points, y - 20)
 	
-	table.insert(points,x+10)
-	table.insert(points,y-20)
+	table.insert(points, x + 10)
+	table.insert(points, y - 20)
 	
-	table.insert(points,x)
-	table.insert(points,y-10)
+	table.insert(points, x)
+	table.insert(points, y - 10)
 	
 	return points
 end
@@ -115,7 +108,7 @@ end
 function car()
 	local c = {}
 	c.x = (mountainCar.position - lower) / resolution
-	c.y = -math.sin(3*mountainCar.position) * scale + base
+	c.y = -math.sin(3 * mountainCar.position) * scale + base
 	
 	return c
 end
@@ -126,10 +119,10 @@ function love.draw()
 	local x = 0;
 	local y = -math.sin(3 * p) * scale + base
 	
-	love.graphics.setColor(0,0,0)
+	love.graphics.setColor(0, 0, 0)
 	love.graphics.line(mountain())
 	
-	love.graphics.setColor(255,0,0)
+	love.graphics.setColor(255, 0, 0)
 	love.graphics.line(flag())
 	
 	
