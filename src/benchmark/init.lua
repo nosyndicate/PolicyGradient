@@ -1,8 +1,8 @@
 require 'torch'
 
 -- create a global table for learner package
-benchmark = {};
+benchmark = {}
 
-torch.include('benchmark','MountainCar.lua');
+torch.include('benchmark','MountainCar.lua')
 
 

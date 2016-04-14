@@ -10,33 +10,42 @@ require 'torch'
 local GaussianDistribution, parent = torch.class('rl.GaussianDistribution','rl.Policy');
 
 
-function GaussianDistribution:__init(actNum, adaptiveVariance)
-	parent:__init(actNum);
+function GaussianDistribution:__init(actDim, adaptiveVariance)
+	parent:__init(actDim);
 	-- by default, we are only adapting mean of the gaussian distribution
 	self.adaptiveVariance = adaptiveVariance or false;
+	self.stdev = nil;
 end
 
 --[[
-	g(y,p_1,p_2,p_3,...,p_n) - Multinomial distribution function 
-	y      - Sampled values (1 to n) (self.action will encoding the sampled value in one-hot format)
-	p_i    - Probability of sampling a value of i
-	g(y,p_1,p_2,p_3,...,p_n) = p_i   (if y = i)
-	       
-	Input is the vector of p_i (p_1, p_2, p_3, ..., p_n)
-	The sampled value from the Multinomial distribution in one-hot encoding will be store in self.action
-	The output of this function is the index of the action
---]]
---[[
+	g(a, mean, stdev) - Gaussian distribution function 
+	y      - Sampled action from the distribution, a continuous value
+	mean   - mean of the distribution
+	stdev  - standard deviation of the distribution
 	
+	
+	We assuming isotropic Gaussian function, which means the 
+	\Sigma = \sigma^2 * I
+	The covariance matrix is the same constant term times the identity matrix, actions are not correlated
+	Input is the vector of [mean_1, ..., mean_i, variance], (if we are not adapting variance, the vector become [mean_1, ..., mean_i]
 --]]
+
 function GaussianDistribution:forward(parameters)
-	assert(self.actNum == parameters:size()[1], 'mismatch of policy distribution');
+	if not self.adaptiveVariance then
+		assert(self.actNum == parameters:size()[1], 'mismatch of policy distribution');
+	else
+		assert(self.actNum + 1 == parameters:size()[1], 'mismatch of policy distribution');
+	end
 	
 	-- save the input for future use
 	self.input = parameters:clone();
 	
+	
+	
+	
 	-- sample 1 time without replacement from the distribution
-	local index = torch.multinomial(parameters, 1); 
+	-- for all the actions
+
 	
 	-- convert the index into one-hot representation
 	self.action = parameters:clone();
@@ -50,17 +59,7 @@ function GaussianDistribution:forward(parameters)
 	return self.action:nonzero()[1][1];
 end
 
---[[
-	We measure the derivative of log Multinomial w.r.t p
-	p - probability vector (p_1, p_2, p_3, ..., p_n)
-	  d ln(g(y,p))           1            d g(y,p)
-	---------------- =  -----------  *  ------------
-	      d p              g(y,p)           d p
-	
-	The derivative is a vector, where at position i
-	=    1/p_i * 1          (if y = i)
-	=    0                  (if y = 0)
---]]
+
 function GaussianDistribution:backward()
 	self.gradInput = self.action:clone();
 	local denominator = self.input:clone();

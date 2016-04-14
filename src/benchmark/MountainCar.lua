@@ -1,12 +1,11 @@
 require 'torch'
-require 'utils.lua'
+
 
 
 local MountainCar = torch.class('benchmark.MountainCar');
 
 -- Constructor
 function MountainCar:__init(randomStart)
-	parent.__init()
 	self.randomStart = randomStart
 	
 	-- 0 is within valid range
@@ -14,7 +13,6 @@ function MountainCar:__init(randomStart)
 	self.velocity = 0
 	
 	-- other variables
-	self.height = 0;
 	self.minPosition = -1.2
 	self.maxPosition = 0.6
 	self.maxVelocity = 0.07
@@ -25,14 +23,17 @@ end
 
 -- set the position and velocity of the robot
 function MountainCar:initialization()
+
 	if not self.randomStart then
-		self.position = -0.5;
-		self.velocity = 0;
+		self.position = -0.5
+		self.velocity = 0
 	else
 		-- note, the uniform function is sample from [a,b), not [a,b]
 		self.position = torch.uniform(self.minPosition,self.maxPosition)
 		self.velocity = torch.uniform(-self.maxVelocity,self.maxVelocity)
 	end
+	
+	self.terminal = false
 end
 
 
@@ -42,7 +43,7 @@ function MountainCar:step(action)
 	local reward = -1;
 
 
-	local temp = velocity + 0.001 * action - 0.0025 * math.cos(3*self.position)
+	local temp = self.velocity + 0.001 * action - 0.0025 * math.cos(3*self.position)
 	self.velocity = math.max(math.min(temp, self.maxVelocity), -self.maxVelocity)
 	self.position = self.position + self.velocity;
 	self.position = math.max(math.min(self.position, self.maxPosition), self.minPosition)

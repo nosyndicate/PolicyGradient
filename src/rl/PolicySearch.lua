@@ -19,7 +19,8 @@ end
 function PolicySearch:getAction(s)
 	-- get the parameters for the distribution of the stochastic policy
 	local parameters = self.model:forward(s);
-	--print(parameters);
+	print("parameters is");
+	print(parameters);
 	-- sample from the distribution 
 	local action = self.actor:getAction(parameters);
 	return action;
