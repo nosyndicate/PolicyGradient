@@ -22,8 +22,7 @@ function step()
 	end
 		
 	local reward, state, terminal = mountainCar:step(1) -- for now, just a test action
-	print("reward is "..reward)
-	print("position is "..state[1])	
+
 		
 		
 end
