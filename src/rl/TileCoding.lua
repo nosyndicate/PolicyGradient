@@ -2,7 +2,7 @@ require 'torch'
 
 -- this is the parent class of SoftmaxCompatibleFeature and GaussianCompatibleFeature
 
-local CompatibleFeature, parent = torch.class('rl.CompatibleFeature','rl.Feature');
+local TileCoding, parent = torch.class('rl.TileCoding','rl.Feature');
 
 
 function CompatibleFeature:__init()

@@ -2,7 +2,7 @@ require 'torch'
 
 
 --[[
-	This serves as the sampler for the neural network to produce the continuous action to take.
+	This serves as the sampler for the function approximator to produce the continuous action to take.
 	Specifically, this module is used to produce the action from an gaussian distribution
 	See section 6 of paper : Simple statistical gradient-following algorithms for connectionist reinforcement learning
 --]]
@@ -48,8 +48,8 @@ function GaussianDistribution:forward(parameters)
 	
 	if self.adaptiveVariance then
 		-- if we are using an adaptive variance, separate it with means of actions
-		stdev = parameters[{o:size()[1]}] -- get the last element
-		self.mean = parameters[{{1, o:size()[1]-1}}]:clone() -- get the distribution means
+		stdev = parameters[{self.actNum + 1}] -- get the last element
+		self.mean = parameters[{{1, self.actNum}}]:clone() -- get the distribution means
 		meanTable = self.mean:totable() -- convert the distribution means to table
 	else
 		stdev = self.stdev -- using fix stdev
@@ -102,10 +102,24 @@ end
 function GaussianDistribution:backward()
 
 	self.gradInput = self.input:clone()
+	
+	local variance = self.stdev*self.stdev
 
 	if self.adaptiveVariance then
-		-- first take care of the mean part
-	
+		-- first take care of the gradient of the mean part
+		self.gradInput:narrow(1, 1, self.actNum):csub(self.action):neg():div(variance)
+		-- then compute the part for stdev
+		-- we have to go through all the actions and accumulate all the gradient
+		local stdevGradient = 0
+		for i=1,self.actNum do
+			local diff = self.action[{i}] - self.input[{i}]
+			local numerator = diff * diff - variance
+			local v = numerator / (variance * self.stdev)
+			stdevGradient = stdevGradient + v
+		end
+		
+		-- set the gradient of stdev
+		self.gradInput[{self.actNum + 1}] = stdevGradient
 	else
 		-- value  = -(mean - a) / stdev^2
 		self.gradInput:csub(self.action):neg():div(self.stdev*self.stdev)
