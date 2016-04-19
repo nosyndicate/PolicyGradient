@@ -1,14 +1,14 @@
 require 'torch'
 
-local Learner = torch.class('rl.Learner');
+local Learner = torch.class('rl.Learner')
 
 function Learner:__init(model)
-	self.model = model;
-	self.alpha = 0.001;
+	self.model = model
+	self.alpha = 0.001
 end
 
 function Learner:setLearningRate(alpha)
-	self.alpha = alpha;
+	self.alpha = alpha
 end
 
 -- receive the state as tensor, return the action

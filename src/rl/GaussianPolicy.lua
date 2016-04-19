@@ -101,14 +101,16 @@ end
 --]]
 function GaussianDistribution:backward()
 
-	self.gradInput = self.input:clone():zero()
-
+	self.gradInput = self.input:clone()
 
 	if self.adaptiveVariance then
-		
+		-- first take care of the mean part
+	
 	else
+		-- value  = -(mean - a) / stdev^2
+		self.gradInput:csub(self.action):neg():div(self.stdev*self.stdev)
+	end
 		
-		
-
+	return self.gradInput
 
 end
