@@ -17,6 +17,7 @@ torch.include('rl','GaussianPolicy.lua')
 
 -- feature representation
 torch.include('rl','Feature.lua')
+torch.include('rl','TileCoding.lua')
 
 -- optimizer
 torch.include('rl','Optimizer.lua')
