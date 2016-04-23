@@ -104,7 +104,7 @@ function TileCoding:tiles(feature)
 	return tilingList
 end
 
-function TilingCoding:hash(integers)
+function TileCoding:hash(integers)
 	self.collisionTable.calls = self.collisionTable.calls + 1
 	local memorySize = self.collisionTable.size
 	

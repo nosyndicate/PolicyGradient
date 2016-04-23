@@ -19,8 +19,6 @@ end
 function PolicySearch:getAction(s)
 	-- get the parameters for the distribution of the stochastic policy
 	local parameters = self.model:forward(s)
-	print("parameters is")
-	print(parameters)
 	-- sample from the distribution 
 	local action = self.actor:getAction(parameters)
 	return action
@@ -28,6 +26,9 @@ end
 
 function PolicySearch:learn(s, r)
 	local gradient = self:calculateGradient(s, r)
+	
+	print("gradient is ")
+	print(gradient)
 	
 	-- update the parameters with the gradient
 	self.optimizer:gradientAscent(gradient)

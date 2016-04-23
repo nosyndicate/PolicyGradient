@@ -32,7 +32,11 @@ function SoftmaxPolicy:forward(parameters)
 	self.input = parameters:clone()
 	
 	-- sample 1 time without replacement from the distribution
+	
+	
+	-- debug
 	local index = torch.multinomial(parameters, 1) 
+
 	
 	-- convert the index into one-hot representation
 	self.action = parameters:clone()

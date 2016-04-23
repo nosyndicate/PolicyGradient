@@ -3,6 +3,10 @@ require 'torch'
 local Optimizer = torch.class('rl.Optimizer')
 
 function Optimizer:__init(params, grads)
+	-- NOTE: params and grads are usually assign by call getParameters() function of the network
+	-- according to the document, this method should only be called once, otherwise
+	-- the storage position will change 
+
 	self.params = params
 	self.grads = grads
 	self.lr = 0.001

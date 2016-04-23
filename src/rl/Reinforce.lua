@@ -15,16 +15,24 @@ function Reinforce:__init(model, actor, optimizer, useOptimalBaseline)
 end
 
 function Reinforce:step(s, r)
-	self.optimizer.grads:zero()
 
+	-- clear out the gradient of previous steps
+	-- NOTE: optimizer hold both the parameters and gradParameters
+	self.optimizer.grads:zero()
+	
 	-- first accumulate the reward
 	-- TODO: this means we are not discount the reward, may consider as future work
 	self.rewardCurrentTrial = self.rewardCurrentTrial + r
 	
 	-- then compute the gradient of current step and add to gradient of current trial
 	local dLogPolicyDOutput = self.actor:backward()
+
 	self.model:backward(s, dLogPolicyDOutput)
+	print("state")
+	print(s)
 	
+	print(self.optimizer.grads)
+	print("============")
 	self.gradientCurrentTrial:add(self.optimizer.grads)
 end
 
@@ -36,8 +44,6 @@ end
 
 function Reinforce:endTrial()
 	-- put the reward and gradient into the corresponding table for learning
-	--table.insert(self.reward, self.rewardCurrentTrial)
-	--table.insert(self.gradient, self.gradientCurrentTrial)
 	table.insert(self.trials,{gradient = self.gradientCurrentTrial, reward = self.rewardCurrentTrial})
 end
 
@@ -60,6 +66,8 @@ function Reinforce:calculateGradient(s, r)
 		if self.useOptimalBaseline then
 			reward:csub(optimalBL)
 		end
+		--print("trial "..i)
+		--print(self.trials[i].gradient)
 		-- multiple the accumulated gradient for each trial with the reward
 		local tempGradient = torch.cmul(self.trials[i].gradient, reward)
 		-- sum up the trials

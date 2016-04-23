@@ -35,7 +35,7 @@ function CollisionTable:__init(size, safety)
 end
 
 
-function Collision:info()
+function CollisionTable:info()
 	local infoTable = {"Collision table: ", "Safety : ", self.safety
     	" Usage : ", self.usage()
 		" Size :", self.size
@@ -46,7 +46,7 @@ function Collision:info()
 	return table.concat(infoTable)
 end
 
-function Collision:reset()
+function CollisionTable:reset()
 	self.calls = 0
 	self.clearHits = 0
 	self.collisions = 0
@@ -56,11 +56,11 @@ function Collision:reset()
 	end
 end
 
-function Collision:stats()
+function CollisionTable:stats()
 	return {self.calls, self.clearHits, self.collisions, self.usage}
 end
 
-function Collision:usage()
+function CollisionTable:usage()
 	local use = 0
 	for i = 1,#data do
 		if data[i] >= 0 then

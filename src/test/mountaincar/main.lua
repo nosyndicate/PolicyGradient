@@ -20,7 +20,7 @@ local resolution = nil
 local base = nil
 local scale = nil
 
--- turn on th debugging
+-- turn on the debugging
 debug = true
 
 function love.load(arg)

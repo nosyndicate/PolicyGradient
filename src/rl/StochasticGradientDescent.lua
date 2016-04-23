@@ -8,6 +8,10 @@ function StochasticGradientDescent:__init(params, grads)
 end
 
 -- we are actually doing gradient ascent instead of descent
-function StochasticGradientDescent:gradientAscent(gradient) 
+function StochasticGradientDescent:gradientAscent(gradient)
+	print("before")
+	print(self.params) 
 	self.params:add(self.lr, gradient)
+	print("after")
+	print(self.params)
 end
