@@ -27,7 +27,8 @@ end
 function Learner:endTrial()
 end
 
--- step function, do something (not necessarily learning) after each step
+-- step function, do something after each step for learning
+-- thus, this function should not update any weights for policy or value for value function
 function Learner:step(s, r)
 
 end

@@ -28,12 +28,24 @@ function Reinforce:step(s, r)
 	local dLogPolicyDOutput = self.actor:backward()
 
 	self.model:backward(s, dLogPolicyDOutput)
-	print("state")
-	print(s)
 	
-	print(self.optimizer.grads)
-	print("============")
+	
+	if tostring(self.optimizer.grads[1]) == "nan" then
+		print("state")
+		print(s)
+		print("action")
+		print(self.actor.action)
+		print("dlog")
+		print(dLogPolicyDOutput)
+		print("policy parameters")
+		print(self.actor.input)
+		print(self.optimizer.params)
+		os.exit(-10)
+	end
+	
+	
 	self.gradientCurrentTrial:add(self.optimizer.grads)
+	
 end
 
 function Reinforce:startTrial()

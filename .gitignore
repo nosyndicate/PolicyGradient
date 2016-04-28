@@ -45,3 +45,6 @@ luac.out
 .project
 .settings/
 
+MacOS
+.DS_Store
+

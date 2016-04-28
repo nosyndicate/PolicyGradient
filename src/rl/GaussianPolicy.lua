@@ -7,14 +7,14 @@ require 'torch'
 	See section 6 of paper : Simple statistical gradient-following algorithms for connectionist reinforcement learning
 --]]
 
-local GaussianDistribution, parent = torch.class('rl.GaussianDistribution','rl.Policy')
+local GaussianPolicy, parent = torch.class('rl.GaussianPolicy','rl.Policy')
 
 
-function GaussianDistribution:__init(actDim, adaptiveVariance, fixedStdev)
+function GaussianPolicy:__init(actDim, stdev)
 	parent:__init(actDim)
-	-- by default, we are only adapting mean of the gaussian distribution
-	self.adaptiveVariance = adaptiveVariance or false
-	self.stdev = fixedStdev or nil
+	-- if stdev is provided as a number, then we only adapt the mean
+	-- if stdev is not provided, then we adapt it
+	self.stdev = stdev
 end
 
 --[[
@@ -24,43 +24,41 @@ end
 	stdev  - standard deviation of the distribution
 	
 	
-	We are assuming isotropic Gaussian function, which means the action are not correlated and with same variance
-	Thus, \Sigma = \sigma^2 * I
-	The covariance matrix is the same constant term times the identity matrix
-	Input is the vector of [mean_1, ..., mean_i, stdev], (if we are not adapting variance, the vector become [mean_1, ..., mean_i]
+	We are assuming action are not correlated
+	each action has its own variance
+	Input is the vector of [mean_1, ..., mean_i, stdev_1, ..., stdev_i], (if we are not adapting stdev, the vector become [mean_1, ..., mean_i])
 --]]
 
-function GaussianDistribution:forward(parameters)
+function GaussianPolicy:forward(parameters)
 	-- first test if we have enough parameters
-	if not self.adaptiveVariance then
+	if self.stdev then
 		assert(self.actNum == parameters:size()[1], 'mismatch of policy distribution')
 	else
-		assert(self.actNum + 1 == parameters:size()[1], 'mismatch of policy distribution')
+		assert(self.actNum * 2 == parameters:size()[1], 'mismatch of policy distribution')
 	end
 	
 	-- save the input for backward computation
 	self.input = parameters:clone()
 		
-	-- sample  from the distribution for all the actions
+	-- sample from the distribution for all the actions
 	
-	local stdev = nil
+	local stdevTable = nil
 	local meanTable = nil
 	
-	if self.adaptiveVariance then
+	if not self.stdev then
 		-- if we are using an adaptive variance, separate it with means of actions
-		stdev = parameters[{self.actNum + 1}] -- get the last element
-		self.mean = parameters[{{1, self.actNum}}]:clone() -- get the distribution means
-		meanTable = self.mean:totable() -- convert the distribution means to table
+		stdevTable = parameters[{{self.actNum + 1, self.actNum + self.actNum}}]:clone():totable() -- get the distribution stdev
+		meanTable = parameters[{{1, self.actNum}}]:clone():totable() -- get the distribution means
+		
 	else
-		stdev = self.stdev -- using fix stdev
-		self.mean = parameters:clone()
-		meanTable = self.mean:totable()
+		stdevTable = torch.Tensor(self.actNum):fill(self.stdev):totable() -- using fix stdev
+		meanTable = parameters:clone():totable()
 	end
 	
 	local actionTable = {}
 	
 	for i=1,#meanTable do
-		actionTable[i] = torch.normal(meanTable[i], stdev)
+		actionTable[i] = torch.normal(meanTable[i], stdevTable[i])
 	end
 	
 	-- store the action in tensor for backward computation
@@ -99,32 +97,29 @@ end
 	                                      
 	For the detail information of the later derivation, see paper : Model-Free Reinforcement Learning with Continuous Action in Practice
 --]]
-function GaussianDistribution:backward()
+function GaussianPolicy:backward()
 
 	self.gradInput = self.input:clone()
 	
-	local variance = self.stdev*self.stdev
-
-	if self.adaptiveVariance then
-		-- first take care of the gradient of the mean part
-		self.gradInput:narrow(1, 1, self.actNum):csub(self.action):neg():div(variance)
-		-- then compute the part for stdev
-		-- we have to go through all the actions and accumulate all the gradient
-		local stdevGradient = 0
-		for i=1,self.actNum do
-			local diff = self.action[{i}] - self.input[{i}]
-			local numerator = diff * diff - variance
-			local v = numerator / (variance * self.stdev)
-			stdevGradient = stdevGradient + v
-		end
-		
-		-- set the gradient of stdev
-		self.gradInput[{self.actNum + 1}] = stdevGradient
-	else
-		-- value  = -(mean - a) / stdev^2
+	if self.stdev then
+		-- we only backward the mean
 		self.gradInput:csub(self.action):neg():div(self.stdev*self.stdev)
-	end
+	else
+		-- we have to adapt both
+
+		local tempStdev = self.gradInput:narrow(1, self.actNum+1, self.actNum):clone()
+		local tempMean = self.gradInput:narrow(1, 1, self.actNum):clone()
 		
+		-- first we do it with mean
+		self.gradInput:narrow(1, 1, self.actNum):csub(self.action):neg():cdiv(tempStdev:clone():pow(2))	
+		
+		-- then we adapt stdev
+		tempMean:csub(self.action):neg():pow(2):csub(tempStdev:clone():pow(2))
+		tempMean:cdiv(tempStdev:clone():pow(3):add(0.000001))
+		-- copy it back to the gradInput
+		self.gradInput:narrow(1, self.actNum+1, self.actNum):copy(tempMean)
+	end
+			
 	return self.gradInput
 
 end

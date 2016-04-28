@@ -66,7 +66,7 @@ function SoftmaxPolicy:backward()
 	local denominator = self.input:clone()
 	
 	-- add some tiny value in case some probability is 0
-	-- denominator = self.input:clone():add(0.00000001)
+	denominator = self.input:clone():add(0.000001)
 	
 	self.gradInput:cdiv(denominator)
 	

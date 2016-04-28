@@ -24,7 +24,8 @@ torch.include('rl','Optimizer.lua')
 torch.include('rl','StochasticGradientDescent.lua')
 
 
-
+-- value functions
+torch.include('rl','Incremental.lua')
 
 
 
