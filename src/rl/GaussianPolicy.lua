@@ -26,33 +26,32 @@ end
 	
 	We are assuming action are not correlated
 	each action has its own variance
-	Input is the vector of [mean_1, ..., mean_i, stdev_1, ..., stdev_i], (if we are not adapting stdev, the vector become [mean_1, ..., mean_i])
+	Input is the table of vectors {[mean_1, ..., mean_i]} {[stdev_1, ..., stdev_i]} (if we are not adapting stdev, the table is just {[mean_1, ..., mean_i]})
 --]]
 
 function GaussianPolicy:forward(parameters)
 	-- first test if we have enough parameters
-	if self.stdev then
-		assert(self.actNum == parameters:size()[1], 'mismatch of policy distribution')
-	else
-		assert(self.actNum * 2 == parameters:size()[1], 'mismatch of policy distribution')
+	assert(self.actNum == parameters[1]:size()[1], 'mismatch of policy mean')
+	if not self.stdev then
+		assert(self.actNum == parameters[2]:size()[1], 'mismatch of policy stdev')
 	end
 	
-	-- save the input for backward computation
-	self.input = parameters:clone()
+
 		
 	-- sample from the distribution for all the actions
-	
 	local stdevTable = nil
 	local meanTable = nil
 	
 	if not self.stdev then
 		-- if we are using an adaptive variance, separate it with means of actions
-		stdevTable = parameters[{{self.actNum + 1, self.actNum + self.actNum}}]:clone():totable() -- get the distribution stdev
-		meanTable = parameters[{{1, self.actNum}}]:clone():totable() -- get the distribution means
-		
+		-- first save the input for backward computation
+		self.input = {parameters[1]:clone(), parameters[2]:clone()}
+		meanTable = parameters[1]:totable() -- get the distribution means
+		stdevTable = parameters[2]:totable() -- get the distribution stdev
 	else
+		self.input = {parameters[1]:clone()}
+		meanTable = parameters[1]:totable()
 		stdevTable = torch.Tensor(self.actNum):fill(self.stdev):totable() -- using fix stdev
-		meanTable = parameters:clone():totable()
 	end
 	
 	local actionTable = {}
@@ -99,25 +98,26 @@ end
 --]]
 function GaussianPolicy:backward()
 
-	self.gradInput = self.input:clone()
 	
 	if self.stdev then
 		-- we only backward the mean
+		self.gradInput = self.input:clone()
 		self.gradInput:csub(self.action):neg():div(self.stdev*self.stdev)
 	else
 		-- we have to adapt both
-
-		local tempStdev = self.gradInput:narrow(1, self.actNum+1, self.actNum):clone()
-		local tempMean = self.gradInput:narrow(1, 1, self.actNum):clone()
+		-- NOTE : here we return a table
+		self.gradInput = {self.input[1]:clone(), self.input[2]:clone()}
+		
+		local temp = self.gradInput[1]:clone()
 		
 		-- first we do it with mean
-		self.gradInput:narrow(1, 1, self.actNum):csub(self.action):neg():cdiv(tempStdev:clone():pow(2))	
+		self.gradInput[1]:csub(self.action):neg():cdiv(self.input[2]:clone():pow(2))	
 		
 		-- then we adapt stdev
-		tempMean:csub(self.action):neg():pow(2):csub(tempStdev:clone():pow(2))
-		tempMean:cdiv(tempStdev:clone():pow(3):add(0.000001))
+		temp:csub(self.action):neg():pow(2):csub(self.input[2]:clone():pow(2))
+		temp:cdiv(self.input[2]:clone():pow(3):add(0.000001))
 		-- copy it back to the gradInput
-		self.gradInput:narrow(1, self.actNum+1, self.actNum):copy(tempMean)
+		self.gradInput[2]:copy(temp)
 	end
 			
 	return self.gradInput

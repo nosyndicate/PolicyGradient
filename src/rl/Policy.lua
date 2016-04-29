@@ -10,7 +10,7 @@ local Policy = torch.class('rl.Policy')
 
 function Policy:__init(actNum)
 	-- in discrete cases, we use actNum for action number
-	-- in continuous case, we use actRepresentation for action dimension
+	-- in continuous case, we use actNum for action dimension
 	self.actNum = actNum
 	self.action = torch.Tensor()
 	self.input = torch.Tensor()

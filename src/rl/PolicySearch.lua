@@ -26,10 +26,7 @@ end
 
 function PolicySearch:learn(s, r)
 	local gradient = self:calculateGradient(s, r)
-	
-	print("gradient is ")
-	print(gradient)
-	
+		
 	-- update the parameters with the gradient
 	self.optimizer:gradientAscent(gradient)
 end

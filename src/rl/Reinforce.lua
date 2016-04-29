@@ -5,8 +5,7 @@ local Reinforce, parent = torch.class('rl.Reinforce','rl.PolicySearch')
 
 function Reinforce:__init(model, actor, optimizer, useOptimalBaseline)
 	parent.__init(self, model, actor, optimizer)
-	--self.reward = {}
-	--self.gradient = {}
+
 	self.trials = {}
 	self.rewardCurrentTrial = nil
 	self.gradientCurrentTrial = nil
@@ -28,22 +27,7 @@ function Reinforce:step(s, r)
 	local dLogPolicyDOutput = self.actor:backward()
 
 	self.model:backward(s, dLogPolicyDOutput)
-	
-	
-	if tostring(self.optimizer.grads[1]) == "nan" then
-		print("state")
-		print(s)
-		print("action")
-		print(self.actor.action)
-		print("dlog")
-		print(dLogPolicyDOutput)
-		print("policy parameters")
-		print(self.actor.input)
-		print(self.optimizer.params)
-		os.exit(-10)
-	end
-	
-	
+		
 	self.gradientCurrentTrial:add(self.optimizer.grads)
 	
 end
