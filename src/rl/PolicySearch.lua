@@ -8,7 +8,10 @@ function PolicySearch:__init(model, actor, optimizer)
 	parent.__init(self, model)
 	self.actor = actor
 	self.optimizer = optimizer
-	--self.optimizer.params:uniform(-0.08,0.08)
+end
+
+function PolicySearch:initiateParameters(lowerBound, upperBound)
+	self.optimizer.params:uniform(lowerBound, upperBound)
 end
 
 function PolicySearch:setLearningRate(alpha)
