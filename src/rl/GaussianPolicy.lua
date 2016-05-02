@@ -26,14 +26,16 @@ end
 	
 	We are assuming action are not correlated
 	each action has its own variance
-	Input is the table of vectors {[mean_1, ..., mean_i]} {[stdev_1, ..., stdev_i]} (if we are not adapting stdev, the table is just {[mean_1, ..., mean_i]})
+	Input is the table of vectors {[mean_1, ..., mean_i]} {[stdev_1, ..., stdev_i]} (if we are not adapting stdev, the table is just [mean_1, ..., mean_i])
 --]]
 
 function GaussianPolicy:forward(parameters)
 	-- first test if we have enough parameters
-	assert(self.actNum == parameters[1]:size()[1], 'mismatch of policy mean')
 	if not self.stdev then
+		assert(self.actNum == parameters[1]:size()[1], 'mismatch of policy mean')
 		assert(self.actNum == parameters[2]:size()[1], 'mismatch of policy stdev')
+	else
+		assert(self.actNum == parameters:size()[1], 'mismatch of policy mean')
 	end
 	
 
@@ -49,8 +51,8 @@ function GaussianPolicy:forward(parameters)
 		meanTable = parameters[1]:totable() -- get the distribution means
 		stdevTable = parameters[2]:totable() -- get the distribution stdev
 	else
-		self.input = {parameters[1]:clone()}
-		meanTable = parameters[1]:totable()
+		self.input = parameters:clone()
+		meanTable = parameters:totable()
 		stdevTable = torch.Tensor(self.actNum):fill(self.stdev):totable() -- using fix stdev
 	end
 	

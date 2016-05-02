@@ -24,6 +24,7 @@ function PolicySearch:getAction(s)
 	local parameters = self.model:forward(s)
 	-- sample from the distribution 
 	local action = self.actor:getAction(parameters)
+	
 	return action
 end
 
