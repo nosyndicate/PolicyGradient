@@ -34,7 +34,7 @@ function Learner:step(s, r)
 end
 
 -- direct update the policy or value function
-function Learner:learn(s, r)
+function Learner:learn(s, r, sprime)
 	
 end
 

@@ -114,7 +114,6 @@ function GaussianPolicy:backward()
 		
 		-- first we do it with mean
 		self.gradInput[1]:csub(self.action):neg():cdiv(self.input[2]:clone():pow(2))	
-		
 		-- then we adapt stdev
 		temp:csub(self.action):neg():pow(2):csub(self.input[2]:clone():pow(2))
 		temp:cdiv(self.input[2]:clone():pow(3):add(0.000001))
@@ -124,4 +123,9 @@ function GaussianPolicy:backward()
 			
 	return self.gradInput
 
+end
+
+
+function GaussianPolicy:compatibleFeature(state, action)
+	
 end

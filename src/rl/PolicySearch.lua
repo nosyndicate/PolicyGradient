@@ -28,6 +28,7 @@ function PolicySearch:getAction(s)
 	return action
 end
 
+-- this function is for episodic methods
 function PolicySearch:learn(s, r)
 	local gradient = self:calculateGradient(s, r)
 		
@@ -35,6 +36,7 @@ function PolicySearch:learn(s, r)
 	self.optimizer:gradientAscent(gradient)
 end
 
+-- episodic method rewrite this function to estimate the gradient of the policy
 function PolicySearch:calculateGradient(s, r)
 	
 end

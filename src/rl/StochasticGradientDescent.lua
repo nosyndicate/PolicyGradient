@@ -9,7 +9,5 @@ end
 
 -- we are actually doing gradient ascent instead of descent
 function StochasticGradientDescent:gradientAscent(gradient)
-
 	self.params:add(self.lr, gradient)
-
 end

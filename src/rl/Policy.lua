@@ -33,3 +33,8 @@ end
 function Policy:backward()
 
 end
+
+-- return the compatible feature of the policy, this usually assume linear combination features
+function Policy:compatibleFeature(state, action)
+
+end

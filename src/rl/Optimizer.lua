@@ -17,6 +17,6 @@ function Optimizer:setLearningRate(alpha)
 end
 
 -- we are actually doing gradient ascent instead of descent
-function Optimizer:gradientAescent()
+function Optimizer:gradientAescent(gradient)
 
 end
