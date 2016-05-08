@@ -6,11 +6,11 @@ require 'nn'
 -- This is easier for us to put all the thing in this class
 
 
-local LinearIncrementalDeterministicPolicy, parent = torch.class('rl.LinearDeterministicPolicy','rl.Incremental')
+local LinearIncrementalDPG, parent = torch.class('rl.LinearIncrementalDPG','rl.Incremental')
 
 
 
-function LinearIncrementalDeterministicPolicy:__init(model, optimizer, criticOption, actDim, featureSize, gamma)
+function LinearIncrementalDPG:__init(model, optimizer, criticOption, actDim, featureSize, gamma)
 	self.model = model
 	self.optimizer = optimizer
 	self.actDim = actDim
@@ -24,8 +24,8 @@ function LinearIncrementalDeterministicPolicy:__init(model, optimizer, criticOpt
 		-- however, that row numer includes one bias number additional to the feature of the state,
 		-- for detail see comments for feature function
 		self.modelParametersNum = self.optimizer.params:size()[1]
-		self.advantageCritic = nn.Sequential(nn.Linear(self.modelParametersNum, 1))
-		self.valueFunctionCritic = nn.Sequential(nn.Linear(featureSize, 1))
+		self.advantageCritic = nn.Sequential():add(nn.Linear(self.modelParametersNum, 1))
+		self.valueFunctionCritic = nn.Sequential():add(nn.Linear(featureSize, 1))
 		self.advantageParams, self.advantageGrads = self.advantageCritic:getParameters()
 		self.valueFunctionParams, self.valueFunctionGrads = self.valueFunctionCritic:getParameters()
 	elseif criticOption ~= "GQ" then
@@ -37,17 +37,19 @@ function LinearIncrementalDeterministicPolicy:__init(model, optimizer, criticOpt
 	self.criticOption = criticOption
 end
 
--- TODO, add compatiblility for Gradient Q-learning
-function LinearIncrementalDeterministicPolicy:setAdditionalLearningRate(alr, vlr)
+-- TODO, add another learning rate for Gradient Q-learning
+function LinearIncrementalDPG:setAdditionalLearningRate(alr, vlr)
 	self.alr = alr
 	self.vlr = vlr
 end
 
-function LinearIncrementalDeterministicPolicy:getAction(s)
+function LinearIncrementalDPG:getAction(s)
 	-- get the desire action for policy
-	self.desireAction = self.model:forward(s)
+	local desireAction = self.model:forward(s)
+		
+	
 	-- add some noise for exploration 
-	local meanTable = self.desireAction:totable()
+	local meanTable = desireAction:totable()
 	local actionTable = {}
 	
 	for i=1,#meanTable do
@@ -62,11 +64,11 @@ function LinearIncrementalDeterministicPolicy:getAction(s)
 end
 
 -- this is used for set the stdev of the behavior policy so the agent have exploration
-function LinearIncrementalDeterministicPolicy:setActionStdev(stdev)
+function LinearIncrementalDPG:setActionStdev(stdev)
 	self.stdev = stdev
 end
 
-function LinearIncrementalDeterministicPolicy:learn(s, r, sprime)
+function LinearIncrementalDPG:learn(s, r, sprime)
 	if self.criticOption == "Q" then
 		self:QCritic(s, r, sprime)
 	elseif self.criticOption == "GQ" then
@@ -74,39 +76,66 @@ function LinearIncrementalDeterministicPolicy:learn(s, r, sprime)
 	end
 end
 
-function LinearIncrementalDeterministicPolicy:QCritic(s, r, sprime)
+function LinearIncrementalDPG:QCritic(s, r, sprime)
 	-- since we are gradient of the policy may get changed due to the computation of compatible feature,
 	-- we have to save that first
 
 	-- first clear out the accumulated gradients	
-	self.optimizer.grads.zero()
-	-- since we don't have gradsOutput for the second parameter, we use (1 1 1 1 ... 1) instead
-	self.model:backward(s, torch.Tensor(self.actDim):fill(1))
-	local gradient = self.optimizer.grads:clone()
+	self.optimizer.grads:zero()
 
 	local compatibleFeature, jacobian = self:feature(s, self.action)
 	local asa = self.advantageCritic:forward(compatibleFeature)
-	
-	local featureSprime, _ = self:feature(sprime, self.model:forward(sprime))
-	local asprimea = self.advantageCritic:forward(featureSprime)
-	
 	local vs = self.valueFunctionCritic:forward(s)
-	local vsprime = self.valueFunctionCritic:forward(sprime)
 	
+	self.advantageGrads:zero()
+	self.valueFunctionGrads:zero()
+	
+	self.advantageCritic:backward(compatibleFeature, torch.Tensor{1})
+	self.valueFunctionCritic:backward(s, torch.Tensor{1})
+	
+	-- these two variables are save for future use
+	local advantageGradient = self.advantageGrads:clone()
+	local valueFunctionGradient = self.valueFunctionGrads:clone()
+	
+	local featureSprime, _ = nil, nil
+	local asprimea = nil
+	local vsprime = nil
+	if sprime then
+		featureSprime, _ = self:feature(sprime, self.model:forward(sprime))
+		asprimea = self.advantageCritic:forward(featureSprime)
+		vsprime = self.valueFunctionCritic:forward(sprime)
+	end
+	
+
 	local qsa = asa + vs
-	local qsprimea = asprimea + vsprime
+	local tdError = nil
+	if sprime then
+		local qsprimea = asprimea + vsprime
+		tdError = r + self.gamma * qsprimea[1] - qsa[1]
+	else
+		tdError = r - qsa[1]
+	end
+
 	
-	local tdError = r + self.gamma * qsprimea - qsa
+	-- there is no easy way to calculate the action gradient of the Approximate Q value Q(s,a)
+	-- thus, we are going to do it in the matrix form using the Jacobian Matrix from the compatible feature computation
+	-- since we have an bias term in critic parameters w, we have to augment the jacobian matrix by adding another column with 0s
+	local temp = torch.Tensor(self.modelParametersNum + 1, self.actDim):fill(0)
+	temp:narrow(1, 1, self.modelParametersNum):copy(jacobian)
+	local jacobianTranspose = temp:t()
+	local actionGradient = torch.mv(jacobianTranspose, self.advantageParams)
 	
-	local
-	self.optimizer:gradientAscent(gradient)
+	-- now actionGradient is a m*1 matrix, m is the dimension of action
+	local thetaGradient = torch.mv(jacobian, actionGradient) -- this create a self.modelParametersNum * 1 vector, with gradient of \theta 
+	self.optimizer:gradientAscent(thetaGradient)
 	
-	local advantageGradient = compatibleFeature:mul(tdError)
+	-- update advantage critic
+	advantageGradient:mul(tdError)
 	self.advantageParams:add(self.alr, advantageGradient)
 	
-	local valueFunctionGradient = s:clone():mul(tdError)
+	-- update value function critic
+	valueFunctionGradient:mul(tdError)
 	self.valueFunctionParams:add(self.vlr, valueFunctionGradient)
-
 end
 
 --[[
@@ -139,17 +168,18 @@ end
    	The matrix showed above is also the Jacobian matrix in the equation above, and this matrix is also apply to the stochastic policy gradient
 --]]
 
-function LinearIncrementalDeterministicPolicy:feature(s, a)
+function LinearIncrementalDPG:feature(s, a)
 	local jacobian = torch.Tensor(self.modelParametersNum, self.actDim)
 	
 	-- at here, we fill the Jacobian matrix,
 	-- we do this in a "stupid" way, by doing multiply forward and backward computation for each action dimension
 	-- however this way is more general, and can apply to other non linear approximation scheme
+	-- nn package has a Jacobian module doing the same task
 	for i = 1, self.actDim do
 		self.model:forward(s)
 		
 		-- NOTE : zero the gradient, VERY IMPORTANT
-		self.optimizer.grads.zero()
+		self.optimizer.grads:zero()
 		
 		-- use variable selection to determine which gradient value is relevant to this action i
 		local selection = torch.Tensor(self.actDim):fill(0)
@@ -168,5 +198,5 @@ function LinearIncrementalDeterministicPolicy:feature(s, a)
 	
 	local feature = torch.mv(jacobian, a)
 	
-	return feature
+	return feature, jacobian
 end

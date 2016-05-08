@@ -3,12 +3,8 @@ require 'torch'
 -- create a global table for learner package
 rl = {}
 
--- policy gradient methods
-torch.include('rl','Learner.lua')
-torch.include('rl','PolicySearch.lua')
-torch.include('rl','Reinforce.lua')
-torch.include('rl','GPOMDP.lua')
 
+torch.include('rl','Learner.lua')
 
 -- policy representation
 torch.include('rl','Policy.lua')
@@ -32,5 +28,9 @@ torch.include('rl','Incremental.lua')
 torch.include('rl', 'InvertingGradient.lua')
 
 
-
+-- policy gradient methods
+torch.include('rl','PolicySearch.lua')
+torch.include('rl','Reinforce.lua')
+torch.include('rl','GPOMDP.lua')
+torch.include('rl','LinearIncrementalDPG.lua')
 
