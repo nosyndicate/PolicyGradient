@@ -32,5 +32,6 @@ torch.include('rl', 'InvertingGradient.lua')
 torch.include('rl','PolicySearch.lua')
 torch.include('rl','Reinforce.lua')
 torch.include('rl','GPOMDP.lua')
+torch.include('rl','ActorCritic.lua')
 torch.include('rl','LinearIncrementalDPG.lua')
 

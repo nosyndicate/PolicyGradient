@@ -21,7 +21,7 @@ function LinearIncrementalDPG:__init(model, optimizer, criticOption, actDim, fea
 	if criticOption == "Q" then
 		-- we are using a Linear Critic with Compatible Feature
 		-- advantageCritic should have the input same to the row of the Jacobian matrix in compatible feature
-		-- however, that row numer includes one bias number additional to the feature of the state,
+		-- however, that row number includes one bias number additional to the feature of the state,
 		-- for detail see comments for feature function
 		self.modelParametersNum = self.optimizer.params:size()[1]
 		self.advantageCritic = nn.Sequential():add(nn.Linear(self.modelParametersNum, 1))

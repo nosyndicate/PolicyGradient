@@ -124,8 +124,3 @@ function GaussianPolicy:backward()
 	return self.gradInput
 
 end
-
-
-function GaussianPolicy:compatibleFeature(state, action)
-	
-end
