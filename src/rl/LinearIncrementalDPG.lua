@@ -43,6 +43,10 @@ function LinearIncrementalDPG:setAdditionalLearningRate(alr, vlr)
 	self.vlr = vlr
 end
 
+function LinearIncrementalDPG:initiateParameters(lower, upper)
+	self.optimizer.params:uniform(lower, upper)
+end
+
 function LinearIncrementalDPG:getAction(s)
 	-- get the desire action for policy
 	local desireAction = self.model:forward(s)
@@ -108,6 +112,7 @@ function LinearIncrementalDPG:QCritic(s, r, sprime)
 	
 
 	local qsa = asa + vs
+	
 	local tdError = nil
 	if sprime then
 		local qsprimea = asprimea + vsprime
