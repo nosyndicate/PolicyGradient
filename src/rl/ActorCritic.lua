@@ -26,13 +26,42 @@ NOTE :
 
 --]]
 
-function ActorCritic:__init(model, actor, optimizer, featureSize, gamma)
+function ActorCritic:__init(model, actor, optimizer, featureSize, gamma, adaptiveLearningRate)
 	-- parent method have to be called this way: with dot and pass self as first parameters
 	parent.__init(self, model, actor.actNum)
 	self.actor = actor	
 	self.optimizer = optimizer
 	self.gamma = gamma or 1
+	self.adaptiveLearningRate = adaptiveLearningRate or false	
 	self.action = nil
+	
+	-- if we use adaptiveLearningRate, for the case where actions have different stdev,
+	-- we have to mark out which gradient value corresponding to what
+	if self.adaptiveLearningRate then
+		self.map = {}
+		-- we do that by faking a state to do forward and backward computation
+		local fakeState = torch.Tensor(featureSize):fill(1)
+		
+		for i = 1,self.actNum do
+			self.model:forward(fakeState)
+			
+			self.optimizer.grads:zero()
+			local selection = torch.Tensor(self.actNum):fill(0)
+			selection[i] = 1
+			self.model:backward(fakeState, {selection, selection})
+			
+			local indice = {}
+			for j = 1,self.optimizer.grads:nElement() do
+				if self.optimizer.grads[j] ~= 0 then
+					table.insert(indice, j)
+				end
+			end
+			
+			table.insert(self.map, indice)
+		end
+	end
+	
+	
 	
 	-- for now we are SARSA for the critic
 	-- other options like batch method may be add in later
@@ -95,7 +124,7 @@ end
 function ActorCritic:getNextAction(s)
 	-- get the parameters for the distribution of the stochastic policy
 	local parameters = self.model:forward(s)
-	--print(parameters)
+	
 	-- sample from the distribution 
 	local actionTable = self.actor:getAction(parameters)
 	
@@ -179,6 +208,29 @@ function ActorCritic:learnGaussian(s, r, sprime)
 
 	-- Update the policy
 	policyGradient:mul(qsa[1])
+	
+	
+	-- NOTE : we multiply another term to fix the gradient norm blow problem, we do this only is stdev is less than 0.5
+	-- see Section 4 in paper : Model-Free Reinforcement Learning with Continuous Action in Practice for detail
+	if self.adaptiveLearningRate then
+		local term = policyGradient:clone():fill(1)
+		if self.actor.stdev and self.actor.stdev < 0.5 then
+			term:fill(self.actor.stdev):pow(2)
+		else
+			local parameters = self.model:forward(s)[2] -- get the tensor for stdev of all actions
+			for i = 1, self.actNum do
+				local indices = self.map[i] -- get the index in the gradient which are related to this action
+				for j = 1, #indices do
+					if parameters[i] < 0.5 then
+						term[indices[j]] = parameters[i]
+					end
+				end
+			end
+			term:pow(2)
+		end
+		policyGradient:cmul(term)
+	end
+	
 	self.optimizer:gradientAscent(policyGradient)
 	
 	
@@ -198,6 +250,8 @@ function ActorCritic:learnGaussian(s, r, sprime)
 		-- if we don't have sprime, reset it to nil since we reach the end of episode
 		self.action = nil
 	end
+	
+	
 end
 
 
