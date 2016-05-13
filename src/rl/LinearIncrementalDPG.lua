@@ -10,10 +10,9 @@ local LinearIncrementalDPG, parent = torch.class('rl.LinearIncrementalDPG','rl.I
 
 
 
-function LinearIncrementalDPG:__init(model, optimizer, criticOption, actDim, featureSize, gamma)
-	self.model = model
+function LinearIncrementalDPG:__init(model, optimizer, criticOption, actNum, featureSize, gamma)
+	parent.__init(self, model, actNum)
 	self.optimizer = optimizer
-	self.actDim = actDim
 	self.gamma = gamma or 1
 	
 	-- for now we are only allow Q learning or Gradient Q learning for critic
@@ -81,7 +80,7 @@ function LinearIncrementalDPG:learn(s, r, sprime)
 end
 
 function LinearIncrementalDPG:QCritic(s, r, sprime)
-	-- since we are gradient of the policy may get changed due to the computation of compatible feature,
+	-- since our gradient of the policy may get changed due to the computation of compatible feature,
 	-- we have to save that first
 
 	-- first clear out the accumulated gradients	
@@ -125,7 +124,7 @@ function LinearIncrementalDPG:QCritic(s, r, sprime)
 	-- there is no easy way to calculate the action gradient of the Approximate Q value Q(s,a)
 	-- thus, we are going to do it in the matrix form using the Jacobian Matrix from the compatible feature computation
 	-- since we have an bias term in critic parameters w, we have to augment the jacobian matrix by adding another column with 0s
-	local temp = torch.Tensor(self.modelParametersNum + 1, self.actDim):fill(0)
+	local temp = torch.Tensor(self.modelParametersNum + 1, self.actNum):fill(0)
 	temp:narrow(1, 1, self.modelParametersNum):copy(jacobian)
 	local jacobianTranspose = temp:t()
 	local actionGradient = torch.mv(jacobianTranspose, self.advantageParams)
@@ -174,20 +173,20 @@ end
 --]]
 
 function LinearIncrementalDPG:feature(s, a)
-	local jacobian = torch.Tensor(self.modelParametersNum, self.actDim)
+	local jacobian = torch.Tensor(self.modelParametersNum, self.actNum)
 	
 	-- at here, we fill the Jacobian matrix,
 	-- we do this in a "stupid" way, by doing multiply forward and backward computation for each action dimension
 	-- however this way is more general, and can apply to other non linear approximation scheme
 	-- nn package has a Jacobian module doing the same task
-	for i = 1, self.actDim do
+	for i = 1, self.actNum do
 		self.model:forward(s)
 		
 		-- NOTE : zero the gradient, VERY IMPORTANT
 		self.optimizer.grads:zero()
 		
 		-- use variable selection to determine which gradient value is relevant to this action i
-		local selection = torch.Tensor(self.actDim):fill(0)
+		local selection = torch.Tensor(self.actNum):fill(0)
 		selection[i] = 1
 		self.model:backward(s, selection)
 		

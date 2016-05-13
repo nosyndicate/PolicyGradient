@@ -10,8 +10,8 @@ require 'torch'
 local GaussianPolicy, parent = torch.class('rl.GaussianPolicy','rl.Policy')
 
 
-function GaussianPolicy:__init(actDim, stdev)
-	parent:__init(actDim)
+function GaussianPolicy:__init(actNum, stdev)
+	parent:__init(actNum)
 	-- if stdev is provided as a number, then we only adapt the mean
 	-- if stdev is not provided, then we adapt it
 	self.stdev = stdev

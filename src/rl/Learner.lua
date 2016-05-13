@@ -2,8 +2,9 @@ require 'torch'
 
 local Learner = torch.class('rl.Learner')
 
-function Learner:__init(model)
+function Learner:__init(model, actNum)
 	self.model = model
+	self.actNum = actNum
 	self.alpha = 0.001
 end
 

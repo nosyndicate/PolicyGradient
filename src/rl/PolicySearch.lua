@@ -5,7 +5,7 @@ local PolicySearch, parent = torch.class('rl.PolicySearch','rl.Learner')
 
 function PolicySearch:__init(model, actor, optimizer)
 	-- parent method have to be called this way: with dot and pass self as first parameters
-	parent.__init(self, model)
+	parent.__init(self, model, actor.actNum)
 	self.actor = actor
 	self.optimizer = optimizer
 end

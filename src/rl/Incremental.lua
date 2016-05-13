@@ -1,9 +1,8 @@
 local Incremental, parent = torch.class('rl.Incremental','rl.Learner')
 
 
-function Incremental:__init(actNum)
-	parent.__init()
-	self.actNum = actNum
+function Incremental:__init(model, actNum)
+	parent.__init(self, model, actNum)
 end
 
 
