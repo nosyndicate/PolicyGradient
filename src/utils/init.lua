@@ -5,6 +5,7 @@ utils = {}
 
 
 torch.include('utils','CollisionTable.lua')
+torch.include('utils','TransitionPool.lua')
 torch.include('utils','Utils.lua')
 
 

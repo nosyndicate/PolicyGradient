@@ -34,3 +34,5 @@ function utils.callFunctionOnObjects(functionName, objectList, parametersList)
 	
 	return resultList
 end
+
+

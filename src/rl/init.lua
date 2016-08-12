@@ -22,7 +22,7 @@ torch.include('rl','StochasticGradientDescent.lua')
 
 -- value functions
 torch.include('rl','Incremental.lua')
-
+torch.include('rl','ContinuousQ.lua')
 
 -- bounding the parameters
 torch.include('rl', 'InvertingGradient.lua')
