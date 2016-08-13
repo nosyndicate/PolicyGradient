@@ -48,8 +48,8 @@ function ContinuousQ:__init(model, args)
 	self.stateDim = args.stateDim
 	self.actionDim = args.actionDim
 	self.discountFactor = args.discountFactor or 0.99
-	self.miniBatchSize = args.miniBatchSize
-	self.miniBatchPerIteration = args.miniBatchPerIteration
+	self.miniBatchSize = args.miniBatchSize 
+	self.miniBatchPerIteration = args.miniBatchPerIteration or 5 -- this constant from the experiment section in continuous Q paper
 	self.softTargetUpdate = args.softTargetUpdate or 0.001 -- this constant is from the Supplementary of DDPG paper
 	
 	
@@ -100,12 +100,24 @@ function ContinuousQ:learn(s, a, r, sprime, terminal)
 		
 		
 		-- if the loss function is L, we first compute 
-		-- dL/dQ
+		-- dL/dQ = -delta
+		-- however, we will doing minimization so \theta = \theta - dL/dQ
+		-- thus, we ignore the negative sign here, and update the weight by adding dL/dQ
 
 
 
 		-- we update the target network with softTargetUpdate
-
+		-- break this into two step, since the target network could be the original network
+		-- also vChange is a new tensor, since we don't want to change the value in paramV
+		-- this is same with the remain network
+		local vChange = torch.mul(self.paramV, self.softTargetUpdate)
+		self.targetParamV:mul(1-self.softTargetUpdate):add(vChange)
+		
+		local mChange = torch.mul(self.paramM, self.softTargetUpdate)
+		self.targetParamM:mul(1-self.softTargetUpdate):add(mChange)
+		
+		local cChange = torch.mul(self.paramC, self.softTargetUpdate)
+		self.targetParamC:mul(1-self.softTargetUpdate):add(cChange)
 
 	end
 		
@@ -133,8 +145,7 @@ end
 
 function ContinuousQ:createNetwork()
 	-- continuous Q network have three parts
-	local network = nn.ConcatTable()
-	
+		
 	local valueThread = nn.Sequential()
 	valueThread:add(nn.Linear(self.stateDim, self.hiddenLayerUnits)):add(nn.ReLU())
 	valueThread:add(nn.Linear(self.hiddenLayerUnits, self.hiddenLayerUnits)):add(nn.ReLU())

@@ -34,4 +34,5 @@ torch.include('rl','Reinforce.lua')
 torch.include('rl','GPOMDP.lua')
 torch.include('rl','ActorCritic.lua')
 torch.include('rl','LinearIncrementalDPG.lua')
+torch.include('rl','DDPG.lua')
 
