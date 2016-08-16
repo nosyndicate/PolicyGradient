@@ -10,13 +10,25 @@ local ContinuousQ, parent = torch.class('rl.ContinuousQ','rl.Incremental')
 function ContinuousQ:__init(model, args)
 	parent.__init(self, model, actNum)
 	
+	self.stateDim = args.stateDim
+	self.actionDim = args.actionDim
+	self.discountFactor = args.discountFactor or 0.99
+	self.miniBatchSize = args.miniBatchSize 
+	self.miniBatchPerIteration = args.miniBatchPerIteration or 5 -- this constant from the experiment section in continuous Q paper
+	self.softTargetUpdate = args.softTargetUpdate or 0.001 -- this constant is from the Supplementary of DDPG paper
+	-- default architecture value used in paper
+	self.hiddenLayerUnits = args.hiddenLayerUnits or 200
+	
+	
+	
+	
 	-- determine if we need to create a default networks 
 	if model then
 		self.vNetwork = model.vNetwork
 		self.meanNetwork = model.meanNetwork
 		self.covarianceNetwork = model.covarianceNetwork
-	else
-		self.vNetwork, self.meanNetwork, self.covarianceNetwork = model.createNetworks()
+	else	
+		self.vNetwork, self.meanNetwork, self.covarianceNetwork = model.createNetworks(args.batchNormalization)
 	end
 	
 	-- grad the parameters and gradient from each network
@@ -45,17 +57,6 @@ function ContinuousQ:__init(model, args)
 		self.targetParamC, self.targetGradC = self.paramC, self.gradC
 	end
 	
-	self.stateDim = args.stateDim
-	self.actionDim = args.actionDim
-	self.discountFactor = args.discountFactor or 0.99
-	self.miniBatchSize = args.miniBatchSize 
-	self.miniBatchPerIteration = args.miniBatchPerIteration or 5 -- this constant from the experiment section in continuous Q paper
-	self.softTargetUpdate = args.softTargetUpdate or 0.001 -- this constant is from the Supplementary of DDPG paper
-	
-	
-	
-	-- default architecture value used in paper
-	self.hiddenLayerUnits = args.hiddenLayerUnits or 200
 	
 	self.transitionPoolArgs = {}
 	-- add in args for transition pool
@@ -76,11 +77,11 @@ end
 
 
 -- direct update the policy or value function
-function ContinuousQ:learn(s, a, r, sprime, terminal)
-	-- first store the transition (s, u, r, sprime) into the memory
-	-- note the format of each element in tuple. s, r, sprime are tensors, r is a scalar
+function ContinuousQ:learn(s, r, sprime, terminal)
+	-- first store the transition (s, a, r, sprime) into the memory
+	-- note the format of each element in tuple. s, a, sprime are tensors, r is a scalar
 	
-	self.transitionPool:add(s, a, r, sprime, terminal)
+	self.transitionPool:add(s, self.action, r, sprime, terminal)
 	
 	for i = 1,self.miniBatchPerIteratioin do
 		local sSet, aSet, rSet, sprimeSet, tSet = self.transitionPool.sample(self.miniBatchSize)
@@ -143,25 +144,57 @@ end
 	some hyperparameters as they are on the paper.
 --]]
 
-function ContinuousQ:createNetwork()
+function ContinuousQ:createNetwork(batchNormalization)
 	-- continuous Q network have three parts
 		
+	-- first value network
 	local valueThread = nn.Sequential()
-	valueThread:add(nn.Linear(self.stateDim, self.hiddenLayerUnits)):add(nn.ReLU())
-	valueThread:add(nn.Linear(self.hiddenLayerUnits, self.hiddenLayerUnits)):add(nn.ReLU())
+	valueThread:add(nn.Linear(self.stateDim, self.hiddenLayerUnits))
+	if batchNormalization then
+		valueThread:add(nn:BatchNormalization(self.hiddenLayerUnits))
+	end
+	valueThread:add(nn.ReLU())
+	valueThread:add(nn.Linear(self.hiddenLayerUnits, self.hiddenLayerUnits))
+	if batchNormalization then
+		valueThread:add(nn.BatchNormalization(self.hiddenLayerUnits))
+	end
+	valueThread:add(nn.ReLU())
 	valueThread:add(nn.Linear(self.hiddenLayerUnits, 1))
 	
+	
+	-- then mean network
 	local meanThread = nn.Sequential()
-	meanThread:add(nn.Linear(self.stateDim, self.hiddenLayerUnits)):add(nn.ReLU())
-	meanThread:add(nn.Linear(self.hiddenLayerUnits, self.hiddenLayerUnits)):add(nn.ReLU())
+	meanThread:add(nn.Linear(self.stateDim, self.hiddenLayerUnits))
+	if batchNormalization then
+		meanThread:add(nn:BatchNormalization(self.hiddenLayerUnits))
+	end
+	meanThread:add(nn.ReLU())
+	meanThread:add(nn.Linear(self.hiddenLayerUnits, self.hiddenLayerUnits))
+	if batchNormalization then
+		meanThread:add(nn.BatchNormalization(self.hiddenLayerUnits))
+	end
+	meanThread:add(nn.ReLU())
+	-- TODO : not sure if we need to insert another batch normalization layer between tanh
 	meanThread:add(nn.Linear(self.hiddenLayerUnits, self.actionDim)):add(nn.Tanh())
 	
+	
+	-- then the covariance network
 	local covarianceThread = nn.Sequential()
-	covarianceThread:add(nn.Linear(self.stateDim, self.hiddenLayerUnits)):add(nn.ReLU())
-	covarianceThread:add(nn.Linear(self.hiddenLayerUnits, self.hiddenLayerUnits)):add(nn.ReLU())
+	covarianceThread:add(nn.Linear(self.stateDim, self.hiddenLayerUnits))
+	if batchNormalization then
+		covarianceThread:add(nn:BatchNormalization(self.hiddenLayerUnits))
+	end
+	covarianceThread:add(nn.ReLU())
+	covarianceThread:add(nn.Linear(self.hiddenLayerUnits, self.hiddenLayerUnits))
+	if batchNormalization then
+		covarianceThread:add(nn.BatchNormalization(self.hiddenLayerUnits))
+	end
+	covarianceThread:add(nn.ReLU())
 
 	--TODO: finish the architecture here
 	
+	
+	return 
 end
 
 
