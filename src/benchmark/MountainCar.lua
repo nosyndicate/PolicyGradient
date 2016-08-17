@@ -3,7 +3,7 @@ require 'torch'
 local MountainCar = torch.class('benchmark.MountainCar')
 
 -- Constructor
-function MountainCar:__init(randomStart)
+function MountainCar:__init(randomStart, continuous)
 	self.randomStart = randomStart
 	
 	-- 0 is within valid range

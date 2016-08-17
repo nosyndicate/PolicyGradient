@@ -29,7 +29,7 @@ function TransitionPool:__init(args)
    	-- this store the joint action value, for single agent, simply set self.numActor = 1
     self.a = torch.Tensor(self.maxSize, self.numActor*self.actionDim):fill(0)
     self.r = torch.Tensor(self.maxSize):fill(0)
-    self.t = torch.ByteTensor(self.maxSize):fill(0)
+    self.t = torch.Tensor(self.maxSize):fill(0)
     
     
     -- create batch buffer
@@ -37,7 +37,7 @@ function TransitionPool:__init(args)
     self.bufferSprime = torch.Tensor(self.bufferSize, self.stateDim):fill(0)
     self.bufferA = torch.Tensor(self.bufferSize, self.numActor*self.actionDim):fill(0)
     self.bufferR = torch.Tensor(self.bufferSize):fill(0)
-    self.bufferT = torch.ByteTensor(self.bufferSize):fill(0)
+    self.bufferT = torch.Tensor(self.bufferSize):fill(0)
     
 end
 

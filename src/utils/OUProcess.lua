@@ -28,10 +28,9 @@ end
 
 function OUProcess:evolveState()
 	local x = self.state
-	local dx = self.theta * (self.mu - x) + self.sigma * torch.
+	local dx = self.theta * (self.mu - x) + self.sigma
 	self.state = x + dx
 	return self.state
-	
 end
 
 function OUProcess:getAction(policy, state)
